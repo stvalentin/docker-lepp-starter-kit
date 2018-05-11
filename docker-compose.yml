@@ -1,0 +1,77 @@
+version: "3.1"
+services:
+    memcached:
+      image: memcached:alpine
+      container_name: app-memcached
+      networks:
+        - code-network
+
+    redis:
+      image: redis:alpine
+      container_name: app-redis
+      networks:
+        - code-network
+
+    postgres:
+      image: postgres:9.6-alpine
+      container_name: app-postgres
+      working_dir: /app
+      volumes:
+        - .:/app
+      ports:
+        - "5432:5432"
+      environment:
+        - POSTGRES_USER=root
+        - POSTGRES_PASSWORD=password
+      networks:
+        - code-network
+
+    elasticsearch:
+      image: elasticsearch:5.4-alpine
+      container_name: app-elasticsearch
+      networks:
+        - code-network
+
+    webserver:
+      image: nginx:alpine
+      container_name: app-webserver
+      working_dir: /app
+      volumes:
+        - .:/app
+        - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+        - ./var/log:/app/var/log
+      ports:
+       - "80:80"
+      links:
+       - php-fpm
+      networks:
+        - code-network
+
+    php-fpm:
+      build: docker/php-fpm
+      container_name: app-php-fpm
+      working_dir: /app
+      volumes:
+        - .:/app
+        - ./docker/php-fpm/php-ini-overrides.ini:/etc/php/7.2/fpm/conf.d/99-overrides.ini
+      networks:
+        - code-network
+
+    rabbitmq:
+        image: rabbitmq:3.7.4-management-alpine
+        volumes:
+          - ./data-rabbitmq:/var/lib/rabbitmq
+        ports:
+          - 5672:5672
+          - 15672:15672
+        environment:
+          - RABBITMQ_ERLANG_COOKIE=alabalaportocala
+          - RABBITMQ_DEFAULT_USER=root
+          - RABBITMQ_DEFAULT_PASS=1234
+          - RABBITMQ_DEFAULT_VHOST=/
+        networks:
+          - code-network
+
+networks:
+    code-network:
+      driver: bridge
